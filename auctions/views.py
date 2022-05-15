@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.forms import ModelForm
 from django import forms
+import copy
 
 from .models import User, Listing, Bid, Comment
 
@@ -12,7 +13,7 @@ from .models import User, Listing, Bid, Comment
 class NewListingForm(ModelForm):
     class Meta:
         model = Listing
-        fields = ['creator', 'title', 'description', 'listing_category', 'picture_url', 'starting_bid', 'closed']
+        fields = ['creator', 'title', 'description', 'listing_category', 'picture_url', 'starting_bid', 'closed'] 
         # Need to add widgets to hide creator and closed and prepopulate them 
         widgets = {
             'creator' : forms.HiddenInput(),
@@ -23,7 +24,11 @@ class NewListingForm(ModelForm):
 # end of model forms
 
 def index(request):
-    return render(request, "auctions/index.html")
+    #listings_list = []
+    listing = Listing.objects.all().filter(closed=False)
+    return render(request, "auctions/index.html", {
+        'listings' : listing,
+    })
 
 
 def login_view(request):
@@ -79,19 +84,28 @@ def register(request):
 
 def create(request):
     if request.method == "POST":
-        l = NewListingForm(request.POST)
+        #l = NewListingForm(request.POST)
+        #l.creator = User.objects.get(pk=request.user.id)
+        form_data = copy.copy(request.POST)
+        form_data['creator'] = User.objects.get(pk=request.user.id)
+        form = NewListingForm(data=form_data)
+        #l.cleaned_data['creator'] = User.objects.get(pk=request.user.id)
+        #l.creator = User.objects.get(pk=request.user.id) 
+        #obj = l.save(commit=False)
         #l.creator = request.user
-        #l.closed = False
-        if l.is_valid():
-            obj = l.save(commit=False) # Return an object without saving to the DB
-            obj.creator = User.objects.get(pk=request.user.id) # Add an author field which will contain current user's id
-            obj.save()
+        if form.is_valid():
+             
+
+            #obj = l.save(commit=False) # Return an object without saving to the DB
+            #obj.creator = User.objects.get(pk=request.user.id) 
+            form.save()
         # I need to populate the hidden fields
             #new_listing = l.save()
             return HttpResponseRedirect(reverse("index"))
     else:
         form = NewListingForm()
         return render(request, "auctions/create.html", {
-        "form" : form
+        "form" : form,
+        #"user" : User.objects.get(pk=request.user.id) 
     })
     
