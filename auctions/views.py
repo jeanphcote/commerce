@@ -3,9 +3,24 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.forms import ModelForm
+from django import forms
 
-from .models import User
+from .models import User, Listing, Bid, Comment
 
+# Here is the space for models forms
+class NewListingForm(ModelForm):
+    class Meta:
+        model = Listing
+        fields = ['creator', 'title', 'description', 'listing_category', 'picture_url', 'starting_bid', 'closed']
+        # Need to add widgets to hide creator and closed and prepopulate them 
+        widgets = {
+            'creator' : forms.HiddenInput(),
+            'closed' : forms.HiddenInput(),
+        }
+
+
+# end of model forms
 
 def index(request):
     return render(request, "auctions/index.html")
@@ -61,3 +76,22 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "auctions/register.html")
+
+def create(request):
+    if request.method == "POST":
+        l = NewListingForm(request.POST)
+        #l.creator = request.user
+        #l.closed = False
+        if l.is_valid():
+            obj = l.save(commit=False) # Return an object without saving to the DB
+            obj.creator = User.objects.get(pk=request.user.id) # Add an author field which will contain current user's id
+            obj.save()
+        # I need to populate the hidden fields
+            #new_listing = l.save()
+            return HttpResponseRedirect(reverse("index"))
+    else:
+        form = NewListingForm()
+        return render(request, "auctions/create.html", {
+        "form" : form
+    })
+    
